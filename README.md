@@ -9,7 +9,7 @@ y versión de terminal. Funciona sobre [yt-dlp](https://github.com/yt-dlp/yt-dlp
 
 1. **Python 3.9+** — https://www.python.org/downloads/ (en Windows, marca "Add Python to PATH").
 2. **Descarga este repositorio** (botón verde *Code → Download ZIP*) o clónalo:
-   `git clone https://github.com/TU-USUARIO/descargador-videos.git`
+   `git clone https://github.com/JoeLeegt/descargador-videos.git`
 3. **Dependencias de Python**: `pip install -U -r requirements.txt`
 4. **ffmpeg**:
    - Windows: `winget install ffmpeg`
@@ -47,7 +47,7 @@ abierta mientras uses la herramienta. Los videos se guardan en `Videos/Descargas
 
 1. En tu repositorio, ve a **Settings → Pages**.
 2. En *Build and deployment*, elige **Deploy from a branch**, rama **main** y carpeta **/docs**. Guarda.
-3. En un par de minutos estará en `https://TU-USUARIO.github.io/descargador-videos/`.
+3. En un par de minutos estará en `https://JoeLeegt.github.io/descargador-videos/`.
 
 Al abrir esa dirección con el motor encendido, la página se conecta sola a
 `http://localhost:8765`. Funciona en Chrome, Edge y Firefox. En Safari usa directamente
