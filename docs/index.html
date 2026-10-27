@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Descargador de videos</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎞️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1EF; --surface:#FFFFFF; --ink:#1C2925; --muted:#5C6B66; --line:#D3DAD6;
+  --pine:#2D5B4C; --pine-ink:#FFFFFF; --pine-soft:#DDE8E3; --resin:#D9971E;
+  --ok:#2A7A4E; --err:#B3261E; --warn:#8A6A00; --track:#E3E8E5;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#111916; --surface:#18221E; --ink:#E4ECE8; --muted:#97A7A1; --line:#2B3934;
+    --pine:#78BFA3; --pine-ink:#0F1A16; --pine-soft:#22352E; --resin:#E8AE45;
+    --ok:#6CC795; --err:#F08A80; --warn:#E3C35A; --track:#26332E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111916; --surface:#18221E; --ink:#E4ECE8; --muted:#97A7A1; --line:#2B3934;
+  --pine:#78BFA3; --pine-ink:#0F1A16; --pine-soft:#22352E; --resin:#E8AE45;
+  --ok:#6CC795; --err:#F08A80; --warn:#E3C35A; --track:#26332E;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body)}
+a{color:var(--pine)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--resin);outline-offset:2px}
+
+.wrap{max-width:1120px;margin:0 auto;padding:28px 20px 48px}
+header{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:24px}
+h1{font:700 clamp(30px,5vw,46px)/1.02 var(--display);letter-spacing:-.02em;margin:0}
+.lede{margin:6px 0 0;color:var(--muted);max-width:56ch}
+
+.motor{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:8px 8px 8px 14px}
+.punto{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none}
+.motor[data-estado="ok"] .punto{background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 22%,transparent)}
+.motor[data-estado="codigo"] .punto{background:var(--resin)}
+.motor[data-estado="apagado"] .punto{background:var(--err)}
+.motor small{color:var(--muted)}
+.btn-link{background:none;border:0;color:var(--pine);text-decoration:underline;cursor:pointer;padding:4px 8px;border-radius:6px}
+
+.aviso{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--resin);
+  border-radius:10px;padding:16px 18px;margin-bottom:20px}
+.aviso h2{font:700 19px/1.2 var(--display);margin:0 0 6px}
+.aviso p{margin:6px 0}
+.aviso ol{margin:8px 0 0;padding-left:20px}
+.aviso code{background:var(--pine-soft);padding:1px 6px;border-radius:5px}
+.campos{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:flex-end}
+.campos label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted)}
+.campos input{min-width:220px}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.panel h2{font:700 20px/1.2 var(--display);margin:0 0 12px}
+
+textarea{width:100%;min-height:210px;resize:vertical;border:1.5px dashed var(--line);border-radius:10px;
+  background:var(--bg);padding:12px 14px;font-size:15px;line-height:1.6}
+textarea.arrastrando{border-color:var(--pine);background:var(--pine-soft)}
+.fila-btn{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.cuenta{margin-left:auto;color:var(--muted);font-size:14px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 14px;cursor:pointer}
+.btn:hover{border-color:var(--pine)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn-principal{background:var(--pine);color:var(--pine-ink);border-color:var(--pine);font-weight:700;
+  padding:12px 22px;font-size:17px;border-radius:11px}
+.btn-principal:hover{filter:brightness(1.08)}
+
+.opciones{display:grid;gap:12px}
+.opciones label.campo{display:grid;gap:4px;font-size:14px;color:var(--muted)}
+select,input[type=text],input[type=number],input[type=url]{width:100%;background:var(--bg);border:1px solid var(--line);
+  border-radius:8px;padding:8px 10px;color:var(--ink)}
+.checks{display:grid;gap:6px;margin-top:4px}
+.checks label{display:flex;gap:8px;align-items:flex-start;font-size:15px}
+.checks input{margin-top:4px;accent-color:var(--pine)}
+.ayuda{font-size:13px;color:var(--muted);margin:0}
+
+.accion{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:22px 0 14px}
+.resumen{color:var(--muted)}
+
+.cola{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.cola:empty::before{content:"Aquí verás el avance de cada video cuando empieces una descarga.";display:block;padding:28px 20px;color:var(--muted);text-align:center}
+.item{padding:14px 18px;border-top:1px solid var(--line);display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:4px 14px;align-items:center}
+.item:first-child{border-top:0}
+.plat{font:700 13px/1 var(--display);padding:6px 8px;border-radius:6px;background:var(--pine-soft);color:var(--ink);text-align:center}
+.enlace{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);text-decoration:none}
+.enlace:hover{text-decoration:underline}
+.estado{font-size:14px;font-weight:700;text-align:right;white-space:nowrap}
+.item[data-estado="ok"] .estado{color:var(--ok)}
+.item[data-estado="error"] .estado{color:var(--err)}
+.item[data-estado="omitido"] .estado{color:var(--warn)}
+.barra{grid-column:2 / 4;height:5px;background:var(--track);border-radius:3px;overflow:hidden}
+.barra i{display:block;height:100%;width:0;background:var(--resin);transition:width .4s ease}
+.item[data-estado="ok"] .barra i{background:var(--ok)}
+.item[data-estado="error"] .barra i{background:var(--err)}
+.item[data-estado="cola"] .barra,.item[data-estado="omitido"] .barra{display:none}
+.detalle{grid-column:2 / 4;font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.archivos{grid-column:2 / 4;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.archivo{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 10px;
+  text-decoration:none;color:var(--ink);font-size:14px;max-width:100%}
+.archivo:hover{border-color:var(--pine)}
+.archivo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.archivo b{color:var(--muted);font-weight:400;flex:none}
+@media (max-width:560px){
+  .item{grid-template-columns:1fr auto}
+  .plat{justify-self:start}
+  .enlace{grid-column:1 / 3;grid-row:2}
+  .barra,.detalle,.archivos{grid-column:1 / 3}
+}
+.pie{margin-top:28px;font-size:13px;color:var(--muted);max-width:70ch}
+[hidden]{display:none !important}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Descargador de videos</h1>
+      <p class="lede">YouTube, Facebook, Instagram y X. Uno por uno o por lotes, en la mejor calidad disponible y con el peso optimizado.</p>
+    </div>
+    <div class="motor" id="motor" data-estado="buscando" role="status" aria-live="polite">
+      <span class="punto" aria-hidden="true"></span>
+      <span><span id="motorTexto">Buscando el motor…</span><br><small id="motorDetalle"></small></span>
+      <button class="btn-link" id="btnConexion" type="button">Conexión</button>
+    </div>
+  </header>
+
+  <section class="aviso" id="avisoApagado" hidden>
+    <h2>El motor de descarga no está encendido</h2>
+    <p>Esta página es la interfaz; las descargas las hace un programa en tu computadora.</p>
+    <ol>
+      <li>Descarga el proyecto desde GitHub e instala los requisitos (Python, <code>yt-dlp</code> y <code>ffmpeg</code>).</li>
+      <li>Abre <code>iniciar_web.bat</code> en Windows, <code>iniciar_web.command</code> en macOS, o ejecuta <code>python servidor.py</code>.</li>
+      <li>Deja abierta esa ventana. Esta página se conectará sola.</li>
+    </ol>
+    <p class="ayuda">Si usas Safari, abre la dirección que muestra el motor (http://localhost:8765) en lugar de esta página.</p>
+  </section>
+
+  <section class="aviso" id="panelConexion" hidden>
+    <h2>Conexión con el motor</h2>
+    <p id="conexionTexto">Escribe el código de acceso que aparece en la ventana del motor.</p>
+    <div class="campos">
+      <label>Dirección del motor<input type="url" id="inServidor" spellcheck="false" placeholder="http://localhost:8765"></label>
+      <label>Código de acceso<input type="text" id="inCodigo" spellcheck="false" autocomplete="off" placeholder="Ej. 7XK4M9QA" style="text-transform:uppercase"></label>
+      <button class="btn btn-principal" id="btnGuardarConexion" type="button" style="padding:9px 18px;font-size:16px">Conectar</button>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="tEnlaces">
+      <h2 id="tEnlaces">Enlaces</h2>
+      <label for="txtEnlaces" class="ayuda" style="display:block;margin-bottom:8px">Pega uno o varios enlaces, uno por línea, o arrastra aquí un archivo CSV.</label>
+      <textarea id="txtEnlaces" spellcheck="false" placeholder="https://www.youtube.com/watch?v=…&#10;https://www.instagram.com/reel/…&#10;https://x.com/…/status/…"></textarea>
+      <div class="fila-btn">
+        <button class="btn" id="btnPegar" type="button">Pegar</button>
+        <label class="btn" for="inCSV" style="display:inline-block">Cargar CSV o TXT</label>
+        <input type="file" id="inCSV" accept=".csv,.txt,text/csv,text/plain" multiple hidden>
+        <button class="btn" id="btnLimpiar" type="button">Limpiar</button>
+        <span class="cuenta" id="cuenta">0 enlaces</span>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="tOpciones">
+      <h2 id="tOpciones">Opciones</h2>
+      <div class="opciones">
+        <label class="campo">Calidad
+          <select id="opCalidad">
+            <option value="original">Original (máxima disponible)</option>
+            <option value="2160">4K (2160p)</option>
+            <option value="1440">1440p</option>
+            <option value="1080">1080p (Full HD)</option>
+            <option value="720">720p (HD)</option>
+          </select></label>
+        <label class="campo">Optimizar peso
+          <select id="opComprimir">
+            <option value="auto">Automática (recomendada)</option>
+            <option value="h265">H.265, máximo ahorro</option>
+            <option value="h264">H.264, máxima compatibilidad</option>
+            <option value="no">Sin compresión</option>
+          </select></label>
+        <label class="campo">Velocidad de optimización
+          <select id="opPreset">
+            <option value="veryfast">Rápida</option>
+            <option value="medium" selected>Equilibrada</option>
+            <option value="slow">Archivos más livianos (lenta)</option>
+          </select></label>
+        <label class="campo">Usar la sesión del navegador
+          <select id="opNavegador">
+            <option value="">Ninguno</option>
+            <option value="chrome">Chrome</option>
+            <option value="firefox">Firefox</option>
+            <option value="edge">Edge</option>
+            <option value="brave">Brave</option>
+            <option value="opera">Opera</option>
+            <option value="safari">Safari</option>
+          </select>
+          <span class="ayuda">Necesario casi siempre para Instagram y Facebook.</span></label>
+        <label class="campo">Descargas simultáneas
+          <input type="number" id="opHilos" min="1" max="6" value="2"></label>
+        <div class="checks">
+          <label><input type="checkbox" id="opOriginal"> Guardar también el original</label>
+          <label><input type="checkbox" id="opCompat"> Formato compatible con editores (H.264/MP4)</label>
+          <label><input type="checkbox" id="opListas"> Descargar listas de reproducción completas</label>
+          <label><input type="checkbox" id="opRepetir"> Volver a descargar aunque ya exista</label>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="accion">
+    <button class="btn btn-principal" id="btnDescargar" type="button">Descargar</button>
+    <button class="btn" id="btnDetener" type="button" hidden>Detener</button>
+    <span class="resumen" id="resumen" aria-live="polite"></span>
+    <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="btnReporte" type="button" hidden>Descargar reporte</button>
+      <button class="btn" id="btnCarpeta" type="button" hidden>Abrir carpeta</button>
+    </span>
+  </div>
+
+  <ul class="cola" id="cola" aria-label="Avance de las descargas"></ul>
+
+  <p class="pie">Los videos se guardan en la computadora donde corre el motor; también puedes bajarlos desde aquí con el botón de cada archivo. Descarga solo contenido que tengas derecho a usar y acredita a sus autores.</p>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const URL_RE = /https?:\/\/[^\s,;"'<>|]+/gi;
+  const guardar = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const leer = (k, d = "") => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } };
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  // ----- conexión
+  const servidoPorMotor = location.protocol === "http:";  // GitHub Pages siempre usa https
+  let servidor = servidoPorMotor ? location.origin : leer("dv_servidor", "http://localhost:8765");
+  const qs = new URLSearchParams(location.search);
+  if (qs.get("codigo")) {
+    guardar("dv_codigo", qs.get("codigo").toUpperCase());
+    history.replaceState(null, "", location.pathname);
+  }
+  let codigo = leer("dv_codigo");
+  let infoMotor = null;
+
+  const api = (ruta, opts = {}) => fetch(servidor.replace(/\/$/, "") + ruta, {
+    ...opts, headers: { "Content-Type": "application/json", "X-Codigo": codigo, ...(opts.headers || {}) }
+  });
+
+  function pintarMotor(estado, texto, detalle = "") {
+    $("motor").dataset.estado = estado;
+    $("motorTexto").textContent = texto;
+    $("motorDetalle").textContent = detalle;
+    $("avisoApagado").hidden = estado !== "apagado";
+    if (estado === "codigo") abrirConexion("El motor está encendido. Escribe el código de acceso que aparece en su ventana.");
+  }
+
+  async function comprobarMotor() {
+    try {
+      const r = await fetch(servidor.replace(/\/$/, "") + "/api/estado?codigo=" + encodeURIComponent(codigo), { cache: "no-store" });
+      infoMotor = await r.json();
+      if (!infoMotor.autorizado) return pintarMotor("codigo", "Falta el código de acceso", servidor);
+      pintarMotor("ok", "Motor conectado", infoMotor.ffmpeg ? `yt-dlp ${infoMotor.yt_dlp}` : "Falta instalar ffmpeg");
+      if (!$("panelConexion").dataset.manual) $("panelConexion").hidden = true;
+      $("btnCarpeta").hidden = !infoMotor.local;
+    } catch (e) {
+      infoMotor = null;
+      pintarMotor("apagado", "Motor apagado", servidor);
+    }
+  }
+
+  function abrirConexion(texto) {
+    $("conexionTexto").textContent = texto || "Escribe la dirección y el código de acceso que aparecen en la ventana del motor.";
+    $("inServidor").value = servidor;
+    $("inCodigo").value = codigo;
+    $("panelConexion").hidden = false;
+  }
+  $("btnConexion").onclick = () => {
+    const p = $("panelConexion");
+    if (p.hidden) { p.dataset.manual = "1"; abrirConexion(); } else { p.hidden = true; delete p.dataset.manual; }
+  };
+  $("btnGuardarConexion").onclick = async () => {
+    servidor = ($("inServidor").value.trim() || "http://localhost:8765").replace(/\/$/, "");
+    codigo = $("inCodigo").value.trim().toUpperCase();
+    guardar("dv_servidor", servidor); guardar("dv_codigo", codigo);
+    delete $("panelConexion").dataset.manual;
+    await comprobarMotor();
+  };
+
+  // ----- enlaces
+  const enlaces = () => [...new Set(($("txtEnlaces").value.match(URL_RE) || []).map(u => u.replace(/[).\]]+$/, "")))];
+  const contar = () => { const n = enlaces().length; $("cuenta").textContent = `${n} enlace${n === 1 ? "" : "s"}`; };
+  const agregar = texto => {
+    const t = $("txtEnlaces");
+    t.value = (t.value.trim() ? t.value.trim() + "\n" : "") + texto.trim() + "\n";
+    contar();
+  };
+  $("txtEnlaces").addEventListener("input", contar);
+  $("btnLimpiar").onclick = () => { $("txtEnlaces").value = ""; contar(); };
+  $("btnPegar").onclick = async () => {
+    try { agregar(await navigator.clipboard.readText()); }
+    catch (e) { $("txtEnlaces").focus(); $("resumen").textContent = "Tu navegador no permitió leer el portapapeles. Pega con Ctrl+V o Cmd+V."; }
+  };
+  async function leerArchivos(files) {
+    let total = 0;
+    for (const f of files) {
+      const encontrados = (await f.text()).match(URL_RE) || [];
+      total += encontrados.length;
+      if (encontrados.length) agregar(encontrados.join("\n"));
+    }
+    $("resumen").textContent = total ? `${total} enlaces leídos del archivo.` : "No se encontraron enlaces en el archivo.";
+  }
+  $("inCSV").onchange = e => { leerArchivos(e.target.files); e.target.value = ""; };
+  const ta = $("txtEnlaces");
+  ta.addEventListener("dragover", e => { e.preventDefault(); ta.classList.add("arrastrando"); });
+  ta.addEventListener("dragleave", () => ta.classList.remove("arrastrando"));
+  ta.addEventListener("drop", e => {
+    ta.classList.remove("arrastrando");
+    if (e.dataTransfer.files.length) { e.preventDefault(); leerArchivos(e.dataTransfer.files); }
+  });
+
+  // ----- opciones recordadas
+  const OPC = ["opCalidad", "opComprimir", "opPreset", "opNavegador", "opHilos", "opOriginal", "opCompat", "opListas", "opRepetir"];
+  try {
+    const g = JSON.parse(leer("dv_opciones", "{}"));
+    OPC.forEach(id => { if (id in g) { const el = $(id); el.type === "checkbox" ? el.checked = g[id] : el.value = g[id]; } });
+  } catch (e) {}
+  const recordar = () => guardar("dv_opciones", JSON.stringify(Object.fromEntries(OPC.map(id => [id, $(id).type === "checkbox" ? $(id).checked : $(id).value]))));
+  OPC.forEach(id => $(id).addEventListener("change", recordar));
+
+  // ----- plataforma
+  function plataforma(u) {
+    let h = ""; try { h = new URL(u).hostname.toLowerCase(); } catch (e) {}
+    const es = d => h === d || h.endsWith("." + d);
+    if (es("youtube.com") || es("youtu.be")) return "YouTube";
+    if (es("facebook.com") || es("fb.watch")) return "Facebook";
+    if (es("instagram.com")) return "Instagram";
+    if (es("x.com") || es("twitter.com")) return "X";
+    return "Otra";
+  }
+
+  // ----- descarga
+  let trabajo = null, sondeo = null;
+  const ESTADOS = { cola: "En cola", ok: "Listo", error: "Error", omitido: "Omitido" };
+
+  function pintarTrabajo(t) {
+    const cola = $("cola");
+    t.items.forEach((it, i) => {
+      let li = cola.children[i];
+      if (!li) {
+        li = document.createElement("li");
+        li.className = "item";
+        li.innerHTML = `<span class="plat">${plataforma(it.enlace)}</span>
+          <a class="enlace" href="${esc(it.enlace)}" target="_blank" rel="noopener">${esc(it.enlace)}</a>
+          <span class="estado"></span><div class="barra"><i></i></div>
+          <div class="detalle"></div><div class="archivos"></div>`;
+        cola.appendChild(li);
+      }
+      li.dataset.estado = it.estado;
+      const pct = it.estado === "activo" && it.progreso ? ` ${it.progreso}%` : "";
+      li.querySelector(".estado").textContent = it.estado === "activo" ? it.texto + pct : ESTADOS[it.estado];
+      li.querySelector(".barra i").style.width = (it.estado === "ok" || it.estado === "error" ? 100 : it.progreso) + "%";
+      li.querySelector(".detalle").textContent = it.estado === "ok" && it.archivos.length === 1 ? it.archivos[0].nota : it.nota;
+      const cont = li.querySelector(".archivos");
+      if (cont.childElementCount !== it.archivos.length) {
+        cont.innerHTML = it.archivos.map(a => {
+          const href = `${servidor.replace(/\/$/, "")}/api/archivo/${t.id}/${i}/${a.n}?codigo=${encodeURIComponent(codigo)}`;
+          return `<a class="archivo" href="${esc(href)}" title="Bajar ${esc(a.nombre)}"><span>${esc(a.nombre)}</span><b>${esc(a.peso_MB)} MB</b></a>`;
+        }).join("");
+      }
+    });
+    const n = t.items.length, c = s => t.items.filter(x => x.estado === s).length;
+    const hechos = c("ok") + c("error") + c("omitido");
+    if (t.terminado) {
+      $("resumen").textContent = `Terminado: ${c("ok")} listos, ${c("omitido")} omitidos, ${c("error")} con error.` +
+        (t.items.some(x => x.estado === "error" && /Instagram|Facebook|X/.test(plataforma(x.enlace))) && !$("opNavegador").value
+          ? " Para Instagram, Facebook y X, elige tu navegador en “Usar la sesión del navegador” y vuelve a intentar." : "");
+    } else {
+      $("resumen").textContent = t.deteniendo ? "Deteniendo… se terminarán las descargas en curso." : `${hechos} de ${n} completados`;
+    }
+  }
+
+  async function sondear() {
+    try {
+      const r = await api(`/api/trabajos/${trabajo}`);
+      if (r.status === 404) return finalizar(true);
+      const t = await r.json();
+      pintarTrabajo(t);
+      if (t.terminado) return finalizar();
+    } catch (e) {
+      $("resumen").textContent = "Se perdió la conexión con el motor. Reintentando…";
+    }
+    sondeo = setTimeout(sondear, 1000);
+  }
+
+  function finalizar(perdido = false) {
+    clearTimeout(sondeo);
+    $("btnDescargar").disabled = false;
+    $("btnDetener").hidden = true;
+    $("btnReporte").hidden = perdido;
+    try { sessionStorage.removeItem("dv_trabajo"); } catch (e) {}
+    if (perdido) $("resumen").textContent = "El motor se reinició y este lote ya no está disponible.";
+  }
+
+  $("btnDescargar").onclick = async () => {
+    const lista = enlaces();
+    if (!lista.length) { $("resumen").textContent = "Pega al menos un enlace o carga un archivo CSV."; $("txtEnlaces").focus(); return; }
+    if (!infoMotor || !infoMotor.autorizado) { await comprobarMotor(); if (!infoMotor || !infoMotor.autorizado) return; }
+    const opciones = {
+      calidad: $("opCalidad").value, comprimir: $("opComprimir").value, preset: $("opPreset").value,
+      navegador: $("opNavegador").value, hilos: +$("opHilos").value || 2,
+      conservar_original: $("opOriginal").checked, compatible: $("opCompat").checked,
+      listas: $("opListas").checked, repetir: $("opRepetir").checked
+    };
+    $("btnDescargar").disabled = true;
+    try {
+      const r = await api("/api/trabajos", { method: "POST", body: JSON.stringify({ enlaces: lista, opciones }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "No se pudo iniciar la descarga");
+      trabajo = d.id;
+      try { sessionStorage.setItem("dv_trabajo", trabajo); } catch (e) {}
+      $("cola").innerHTML = "";
+      $("btnDetener").hidden = false; $("btnReporte").hidden = true;
+      $("resumen").textContent = `0 de ${d.total} completados`;
+      sondear();
+    } catch (e) {
+      $("btnDescargar").disabled = false;
+      $("resumen").textContent = e.message === "Failed to fetch" ? "No se pudo conectar con el motor. Revisa que esté encendido." : e.message;
+    }
+  };
+  $("btnDetener").onclick = async () => { if (trabajo) await api(`/api/trabajos/${trabajo}/detener`, { method: "POST", body: "{}" }); };
+  $("btnReporte").onclick = () => {
+    if (trabajo) location.href = `${servidor.replace(/\/$/, "")}/api/reporte/${trabajo}?codigo=${encodeURIComponent(codigo)}`;
+  };
+  $("btnCarpeta").onclick = () => api("/api/abrir-carpeta", { method: "POST", body: "{}" });
+
+  // ----- inicio
+  (async () => {
+    await comprobarMotor();
+    let previo = null; try { previo = sessionStorage.getItem("dv_trabajo"); } catch (e) {}
+    if (previo && infoMotor && infoMotor.autorizado) {
+      trabajo = previo; $("btnDescargar").disabled = true; $("btnDetener").hidden = false; sondear();
+    }
+    setInterval(() => { if (!$("btnDescargar").disabled) comprobarMotor(); }, 6000);
+  })();
+})();
+</script>
+</body>
+</html>
